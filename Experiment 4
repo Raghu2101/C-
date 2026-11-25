@@ -1,0 +1,107 @@
+#include <iostream>
+#include <stack>
+#include <queue>
+#include <chrono>
+
+using namespace std;
+using namespace chrono;
+
+template <class T>
+class MyStack {
+private:
+    T data[10000];
+    int top;
+public:
+    MyStack() { top = -1; }
+    void push(T value) {
+        if (top < 9999) data[++top] = value;
+    }
+    void pop() {
+        if (top >= 0) top--;
+    }
+    T getTop() { return (top >= 0) ? data[top] : 0; } // Needed to read data
+};
+
+template <class T>
+class MyCircularQueue {
+private:
+    T data[10000];
+    int front, rear, count; // Track size to distinguish empty vs full
+public:
+    MyCircularQueue() {
+        front = 0;
+        rear = -1;
+        count = 0;
+    }
+    void enqueue(T value) {
+        if (count < 10000) {
+            rear = (rear + 1) % 10000; // Wraps around back to 0
+            data[rear] = value;
+            count++;
+        }
+    }
+    void dequeue() {
+        if (count > 0) {
+            front = (front + 1) % 10000; // Wraps around back to 0
+            count--;
+        }
+    }
+    T getFront() { return (count > 0) ? data[front] : 0; } // Needed to read data
+};
+
+int main() {
+    const int N = 10000;
+    volatile int checksum = 0; // volatile forces the compiler not to optimize calculations away
+
+    // 1. Custom Stack Benchmark
+    auto start = high_resolution_clock::now();
+    MyStack<int> myStack;
+    for (int i = 0; i < N; i++) myStack.push(i);
+    for (int i = 0; i < N; i++) {
+        checksum += myStack.getTop(); // Access data to prevent optimization
+        myStack.pop();
+    }
+    auto end = high_resolution_clock::now();
+    auto customStackTime = duration_cast<microseconds>(end - start);
+
+    // 2. STL Stack Benchmark
+    start = high_resolution_clock::now();
+    stack<int> stlStack;
+    for (int i = 0; i < N; i++) stlStack.push(i);
+    for (int i = 0; i < N; i++) {
+        checksum += stlStack.top();
+        stlStack.pop();
+    }
+    end = high_resolution_clock::now();
+    auto stlStackTime = duration_cast<microseconds>(end - start);
+
+    // 3. Custom Queue Benchmark
+    start = high_resolution_clock::now();
+    MyCircularQueue<int> myQueue;
+    for (int i = 0; i < N; i++) myQueue.enqueue(i);
+    for (int i = 0; i < N; i++) {
+        checksum += myQueue.getFront();
+        myQueue.dequeue();
+    }
+    end = high_resolution_clock::now();
+    auto customQueueTime = duration_cast<microseconds>(end - start);
+
+    // 4. STL Queue Benchmark
+    start = high_resolution_clock::now();
+    queue<int> stlQueue;
+    for (int i = 0; i < N; i++) stlQueue.push(i);
+    for (int i = 0; i < N; i++) {
+        checksum += stlQueue.front();
+        stlQueue.pop();
+    }
+    end = high_resolution_clock::now();
+    auto stlQueueTime = duration_cast<microseconds>(end - start);
+
+    // Print Results
+    cout << "Custom Stack Time: " << customStackTime.count() << " microseconds" << endl;
+    cout << "STL Stack Time:    " << stlStackTime.count() << " microseconds" << endl;
+    cout << "Custom Queue Time: " << customQueueTime.count() << " microseconds" << endl;
+    cout << "STL Queue Time:    " << stlQueueTime.count() << " microseconds" << endl;
+
+    return 0;
+}
